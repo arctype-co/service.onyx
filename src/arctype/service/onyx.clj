@@ -5,12 +5,13 @@
     [arctype.service.protocol :refer :all]
     [arctype.service.util :refer [rmerge]]
     [clojure.tools.logging :as log]
+    [onyx.api :as onyx]
     [schema.core :as S]
-    [onyx.api :as onyx]))
+    [sundbry.resource :as resource]))
 
 (def Config
+  ; Full peer config schema at https://github.com/onyx-platform/onyx/blob/0.9.x/src/onyx/schema.cljc#L530
   {:peer-config {:zookeeper/address S/Str ; "127.0.0.1:2188"
-                 :onyx.messaging/bind-addr S/Str ; "localhost"
                  S/Keyword S/Any}
    :n-peers S/Int ; Number of peers to spawn within this instance
    })
@@ -19,8 +20,6 @@
   {:peer-config {:onyx.peer/job-scheduler :onyx.job-scheduler/greedy
                  :onyx.messaging/impl :aeron
                  :onyx.messaging/peer-port 40200
-                 ;;; Change "localhost" to a resolvable hostname
-                 ;;; by any node in your cluster.
                  :onyx.messaging/bind-addr "localhost"}
    :n-peers 2})
 
@@ -51,7 +50,7 @@
   [resource-name
    config :- Config]
   (let [config (rmerge default-config config)]
-    (resource/create-resource
+    (resource/make-resource
       (map->OnyxService
         {:config config})
       resource-name)))
