@@ -2,14 +2,17 @@
   (:import 
     [java.util UUID])
   (:require
+    [clojure.string :as string]
     [clojure.tools.logging :as log]
     [arctype.service.protocol :refer :all]
     [arctype.service.util :refer [rmerge]]
     [com.palletops.log-config.timbre.tools-logging :refer [make-tools-logging-appender]]
     [com.stuartsierra.component :as component]
     [onyx.api :as onyx]
+    [onyx.schema :as onyx-schema]
     [onyx.system :as onyx-system]
     [schema.core :as S]
+    [schema.coerce :as coerce]
     [sundbry.resource :as resource]))
 
 (def Config
@@ -26,6 +29,22 @@
                  :onyx.messaging/peer-port 40200
                  :onyx.messaging/bind-addr "localhost"}
    :n-peers 2})
+
+(defn string->namespaced-keyword [s]
+  (if (string? s) 
+    (let [[s-ns s-kw] (string/split s #"/")]
+      (if (some? s-kw)
+        (keyword s-ns s-kw)
+        (keyword s-ns)))
+    s))
+
+(defn- namespaced-json-coercion-matcher
+  [schema]
+  (or 
+    ({onyx-schema/NamespacedKeyword string->namespaced-keyword} schema)
+    (coerce/+json-coercions+ schema)
+    (coerce/keyword-enum-matcher schema)
+    (coerce/set-matcher schema)))
 
 (S/defn zookeeper-address :- S/Str
   [this]
@@ -56,6 +75,13 @@
                                     {:enabled? true
                                       :fmt-output-opts {:nofonts? true}})}
                               :min-level :info})
+          coerce-peer-config (coerce/coercer onyx-schema/PeerConfig namespaced-json-coercion-matcher)
+          peer-config (coerce-peer-config peer-config)
+          _ (log/info {:message "coerced peer-config"
+                       :peer-config peer-config})
+          _ (when (schema.utils/error? peer-config)
+              (throw (ex-info (str (schema.utils/error-val peer-config))
+                              peer-config)))
           peer-group (onyx/start-peer-group peer-config)
           peers (onyx/start-peers (:n-peers config) peer-group)
           client (component/start (onyx-system/onyx-client peer-config))]
