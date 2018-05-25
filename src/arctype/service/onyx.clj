@@ -58,6 +58,10 @@
   [this job-id]
   (onyx/kill-job (:client this) job-id))
 
+(defn job-state
+  [this job-id]
+  (onyx/job-state (:client this) (:onyx/tenancy-id (:peer-config this)) job-id))
+
 (defn gc
   [this]
   (onyx/gc (:client this)))
@@ -66,7 +70,8 @@
   PLifecycle
 
   (start [this]
-    (log/info {:message "Starting Onyx service"})
+    (log/info {:message "Starting Onyx service"
+               :tenancy-id (:onyx/tenancy-id (:peer-config config))})
     (let [peer-config (assoc (:peer-config config)
                              :onyx.log/config 
                              {:appenders
@@ -77,8 +82,6 @@
                               :min-level :info})
           coerce-peer-config (coerce/coercer onyx-schema/PeerConfig namespaced-json-coercion-matcher)
           peer-config (coerce-peer-config peer-config)
-          _ (log/info {:message "coerced peer-config"
-                       :peer-config peer-config})
           _ (when (schema.utils/error? peer-config)
               (throw (ex-info (str (schema.utils/error-val peer-config))
                               peer-config)))
