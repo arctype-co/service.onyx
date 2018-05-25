@@ -6,7 +6,9 @@
     [arctype.service.protocol :refer :all]
     [arctype.service.util :refer [rmerge]]
     [com.palletops.log-config.timbre.tools-logging :refer [make-tools-logging-appender]]
+    [com.stuartsierra.component :as component]
     [onyx.api :as onyx]
+    [onyx.system :as onyx-system]
     [schema.core :as S]
     [sundbry.resource :as resource]))
 
@@ -31,15 +33,22 @@
 
 (defn submit-job
   [this job]
-  (onyx/submit-job (:peer-config this) job))
+  (onyx/submit-job (:client this) job))
+
+(defn kill-job
+  [this job-id]
+  (onyx/kill-job (:client this) job-id))
+
+(defn gc
+  [this]
+  (onyx/gc (:client this)))
 
 (defrecord OnyxService [config]
   PLifecycle
 
   (start [this]
     (log/info {:message "Starting Onyx service"})
-    (let [onyx-id (UUID/randomUUID)
-          peer-config (assoc (:peer-config config)
+    (let [peer-config (assoc (:peer-config config)
                              :onyx.log/config 
                              {:appenders
                               {:println nil
@@ -48,18 +57,22 @@
                                       :fmt-output-opts {:nofonts? true}})}
                               :min-level :info})
           peer-group (onyx/start-peer-group peer-config)
-          peers (onyx/start-peers (:n-peers config) peer-group)]
+          peers (onyx/start-peers (:n-peers config) peer-group)
+          client (component/start (onyx-system/onyx-client peer-config))]
       (assoc this
              :peer-config peer-config
              :peer-group peer-group
-             :peers peers)))
+             :peers peers
+             :client client)))
 
   (stop [this]
     (log/info {:message "Stopping Onyx service"})
     (doseq [peer (:peers this)]
       (onyx/shutdown-peer peer))
     (onyx/shutdown-peer-group (:peer-group this))
-    (dissoc this :tenancy-id :peer-group :peers))
+    (as-> this this
+      (update this :client component/stop)
+      (dissoc this :tenancy-id :peer-group :peers :client)))
   
   )
 
