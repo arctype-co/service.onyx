@@ -102,6 +102,9 @@
     (as-> this this
       (update this :client component/stop)
       (dissoc this :tenancy-id :peer-group :peers :client)))
+
+  PClientDecorator
+  (client [this] (:client this))
   
   )
 
