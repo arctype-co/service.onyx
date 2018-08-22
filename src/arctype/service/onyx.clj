@@ -30,6 +30,14 @@
                  :onyx.messaging/bind-addr "localhost"}
    :n-peers 2})
 
+(defn- env-config
+  []
+  (let [env-onyx-bind-addr (System/getenv "ONYX_BIND_ADDR")]
+    (if (and (some? env-onyx-bind-addr)
+             (not (empty? env-onyx-bind-addr)))
+      {:peer-config {:onyx.messaging/bind-addr env-onyx-bind-addr}}
+      {})))
+
 (defn string->namespaced-keyword [s]
   (if (string? s) 
     (let [[s-ns s-kw] (string/split s #"/")]
@@ -71,13 +79,14 @@
 
   (start [this]
     (log/info {:message "Starting Onyx service"
+               :config config
                :tenancy-id (:onyx/tenancy-id (:peer-config config))})
     (let [peer-config (assoc (:peer-config config)
                              :onyx.log/config 
                              {:appenders
-                              {:println nil
+                              {;:println nil
                                :jl (make-tools-logging-appender
-                                    {:enabled? true
+                                     {:enabled? true
                                       :fmt-output-opts {:nofonts? true}})}
                               :min-level :info})
           coerce-peer-config (coerce/coercer onyx-schema/PeerConfig namespaced-json-coercion-matcher)
@@ -111,7 +120,7 @@
 (S/defn create
   [resource-name
    config :- Config]
-  (let [config (rmerge default-config config)]
+  (let [config (rmerge (rmerge default-config (env-config)) config)]
     (resource/make-resource
       (map->OnyxService
         {:config config})
