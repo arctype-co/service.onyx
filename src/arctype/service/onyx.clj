@@ -84,7 +84,7 @@
     (let [peer-config (assoc (:peer-config config)
                              :onyx.log/config 
                              {:appenders
-                              {;:println nil
+                              {:println nil
                                :jl (make-tools-logging-appender
                                      {:enabled? true
                                       :fmt-output-opts {:nofonts? true}})}
