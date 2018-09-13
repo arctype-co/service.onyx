@@ -58,6 +58,10 @@
   [this]
   (-> this :config :peer-config :zookeeper/address))
 
+(S/defn tenancy-id :- S/Str
+  [this]
+  (:onyx/tenancy-id (:peer-config this)))
+
 (defn submit-job
   [this job]
   (onyx/submit-job (:client this) job))
@@ -68,7 +72,7 @@
 
 (defn job-state
   [this job-id]
-  (onyx/job-state (:client this) (:onyx/tenancy-id (:peer-config this)) job-id))
+  (onyx/job-state (:client this) (tenancy-id this) job-id))
 
 (defn gc
   [this]
