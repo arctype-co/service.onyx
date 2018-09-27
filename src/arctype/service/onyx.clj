@@ -6,7 +6,6 @@
     [clojure.tools.logging :as log]
     [arctype.service.protocol :refer :all]
     [arctype.service.util :refer [rmerge]]
-    [com.palletops.log-config.timbre.tools-logging :refer [make-tools-logging-appender]]
     [com.stuartsierra.component :as component]
     [onyx.api :as onyx]
     [onyx.schema :as onyx-schema]
@@ -78,6 +77,17 @@
   [this]
   (onyx/gc (:client this)))
 
+(defn- log-appender
+  [config]
+  {:enabled? true
+   :async? false
+   :min-level nil
+   :rate-limit nil
+   :output-fn :inherit
+   :fmt-output-opts {:nofonts? true}
+   :fn (fn [data]
+         (log/log (:?ns-str data) (:level data) (:?err data) (apply print-str (:vargs data))))})
+
 (defrecord OnyxService [config]
   PLifecycle
 
@@ -88,9 +98,7 @@
                              :onyx.log/config 
                              {:appenders
                               {:println nil
-                               :jl (make-tools-logging-appender
-                                     {:enabled? true
-                                      :fmt-output-opts {:nofonts? true}})}
+                               :tools-logging (log-appender config)}
                               :min-level :info})
           coerce-peer-config (coerce/coercer onyx-schema/PeerConfig namespaced-json-coercion-matcher)
           peer-config (coerce-peer-config peer-config)
