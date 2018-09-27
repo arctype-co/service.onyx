@@ -83,7 +83,6 @@
 
   (start [this]
     (log/info {:message "Starting Onyx service"
-               :config config
                :tenancy-id (:onyx/tenancy-id (:peer-config config))})
     (let [peer-config (assoc (:peer-config config)
                              :onyx.log/config 
