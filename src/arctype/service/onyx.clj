@@ -74,7 +74,7 @@
                   (some? (get headers "authorization"))
                   (assoc "authorization" "<redacted>"))))))
 
-(defn wrap-tracing
+(defn- wrap-tracing
   [handler]
   (fn [req]
     (let [request-id (str (UUID/randomUUID))
@@ -100,10 +100,10 @@
   result)
 
 (S/defn ^:private submit-job! :- OnyxJob
-  [this job-builder job-config]
+  [{:keys [state] :as this} job-builder job-config]
   (with-resources this [:onyx]
     (let [onyx-client (client onyx)
-          job-spec (job-builder job-config)
+          job-spec (job-builder (:job-context @state) job-config)
           result (onyx-api/submit-job onyx-client job-spec)]
       (check-error result)
       (log/info {:message "Onyx job submitted"
@@ -275,7 +275,13 @@
 
 (defn- initial-state
   []
-  {:replica nil})
+  {:job-context nil
+   :replica nil})
+
+(defn set-job-context!
+  "Set the context for job construction"
+  [{:keys [state]} context]
+  (swap! state assoc :job-context context))
 
 (defrecord DataService [config state job-defs]
 
