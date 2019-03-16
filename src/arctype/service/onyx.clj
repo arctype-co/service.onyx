@@ -103,7 +103,7 @@
   [this job-builder job-config]
   (with-resources this [:onyx]
     (let [onyx-client (client onyx)
-          job-spec (job-builder this job-config)
+          job-spec (job-builder job-config)
           result (onyx-api/submit-job onyx-client job-spec)]
       (check-error result)
       (log/info {:message "Onyx job submitted"
