@@ -91,11 +91,6 @@
                     :response (response-str response)})
         response))))
 
-(def route-404
-  (compojure.core/ANY "*" []
-                      {:status 404
-                       :body "Page not found!"}))
-
 (defn- check-error
   [result]
   (when-let [ex (:e result)]
@@ -362,8 +357,7 @@
                          (with-resources this [:janitor]
                            (janitor/request-gc! janitor)
                            {:status 201
-                            :body nil})))
-          route-404)
+                            :body nil}))))
         wrap-tracing))
 
 )
