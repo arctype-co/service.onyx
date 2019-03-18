@@ -113,14 +113,14 @@
        :job-name (:job-name job-spec)})))
 
 (S/defn ^:private resume-job! :- OnyxResumedJob
-  [this 
+  [{:keys [state] :as this}
    {:keys [job-id job-name] :as params} :- ResumeJobParams
    job-builder
    job-config]
   (with-resources this [:onyx]
     (let [onyx-client (client onyx)
           tenancy-id (onyx-engine/tenancy-id onyx)
-          new-job (job-builder this job-config)
+          new-job (job-builder (:job-context @state) job-config)
           snapshot (if (some? job-id)
                      (onyx-api/job-snapshot-coordinates onyx-client tenancy-id job-id)
                      (onyx-api/named-job-snapshot-coordinates onyx-client tenancy-id job-name))
