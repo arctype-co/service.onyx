@@ -5,4 +5,4 @@
    [arctype/service.curator "0.1.0-SNAPSHOT"]
    [arctype/service.quartzite "0.1.1-SNAPSHOT"]
    [metosin/compojure-api "2.0.0-alpha29"]
-   [org.onyxplatform/onyx "0.14.4"]])
+   [org.onyxplatform/onyx "0.14.4-arctype"]])
