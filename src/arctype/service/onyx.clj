@@ -74,7 +74,7 @@
                   (some? (get headers "authorization"))
                   (assoc "authorization" "<redacted>"))))))
 
-(defn- wrap-tracing
+(defn wrap-tracing
   [handler]
   (fn [req]
     (let [request-id (str (UUID/randomUUID))
