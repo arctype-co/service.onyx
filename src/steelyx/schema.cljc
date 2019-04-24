@@ -1,5 +1,5 @@
-(ns ^{:doc "Onyx data service schemas"}
-  arctype.service.onyx.schema
+(ns ^{:doc "Steelyx service schemas"}
+  steelyx.schema
   (:require
     [schema.core :as S]))
 

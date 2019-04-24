@@ -1,4 +1,4 @@
-(ns arctype.service.onyx
+(ns steelyx
   (:import
     [java.util UUID])
   (:require
@@ -8,8 +8,6 @@
     [arctype.service.util :refer [<?? thread-try]]
     [arctype.service.curator :as curator]
     [arctype.service.quartzite :as quartzite]
-    [arctype.service.onyx.engine :as onyx-engine]
-    [arctype.service.onyx.janitor :as janitor]
     [cheshire.core :as json]
     [compojure.core :as compojure-core]
     [compojure.api.sweet :as compojure-api :refer [context GET POST ANY]]
@@ -19,18 +17,21 @@
     [onyx.log.zookeeper :as zk-log]
     [schema.core :as S]
     [sundbry.resource :as resource :refer [with-resources]]
-    [arctype.service.onyx.schema :refer :all]))
+    [steelyx.engine :as onyx-engine]
+    [steelyx.janitor :as janitor]
+    [steelyx.schema :refer :all]))
 
 (def Config
   {:onyx onyx-engine/Config
    :curator curator/Config
    :jobs {S/Keyword S/Any}
-   ; Swagger API info
-   :info {:version S/Str :title S/Str :description S/Str}
    (S/optional-key :janitor) janitor/Config})
 
 (def ^:private default-config
   {:janitor {}})
+
+(def ^:private api-info
+  {:version "0.2" :title "Steelyx API" :description "Onyx service engine"})
 
 (defn- maybe-int
   [x]
@@ -288,7 +289,7 @@
   PLifecycle
   (start [this]
     (with-resources this [:onyx :janitor]
-      (log/info {:message "Starting data service"
+      (log/info {:message "Starting Steelyx service"
                  :job-defs (keys job-defs)})
       (reset! state (initial-state))
       (janitor/set-cleaner! janitor #(deep-gc! this))
@@ -301,7 +302,7 @@
         (assoc this :events-handler (handle-events this)))))
 
   (stop [this]
-    (log/info {:message "Stopping data service"})
+    (log/info {:message "Stopping Steelyx service"})
     (async/close! (:events-chan this))
     (<?? (:events-handler this))
     (dissoc this :events-chan :sub :events-handler))
@@ -315,12 +316,12 @@
                                    :compojure.api.exception/response-validation handle-validation-exception}}
            :swagger {:spec "/swagger.json"
                      :ui "/swagger"
-                     :data {:info (:info config)}}}
+                     :data {:info api-info}}}
           (context "/" []
                    :dynamic true
                    (GET "/" []
                         {:status 200
-                         :body (:title (:info config))})
+                         :body (:title api-info)})
                    (GET "/health" req
                         :summary "Perform a health check"
                         (http-health-check this req))

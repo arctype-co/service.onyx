@@ -1,4 +1,4 @@
-(ns arctype.service.onyx.engine
+(ns steelyx.engine
   (:import 
     [java.util UUID])
   (:require

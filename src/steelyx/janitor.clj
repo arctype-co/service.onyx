@@ -1,4 +1,4 @@
-(ns arctype.service.onyx.janitor
+(ns steelyx.janitor
   (:require
     [clojure.tools.logging :as log]
     [arctype.service.protocol :refer :all]

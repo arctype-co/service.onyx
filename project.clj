@@ -1,4 +1,4 @@
-(defproject arctype/steelyx "0.2.0"
+(defproject arctype/steelyx "0.3.0-SNAPSHOT"
   :dependencies 
   [[org.clojure/clojure "1.10.0"]
    [arctype/service "1.0.0"]
