@@ -235,9 +235,9 @@
      :body result}))
 
 (defn- deep-gc!
-  [this]
+  [this {:keys [force?]}]
   (with-resources this [:onyx]
-    (if (healthy-onyx-status? (onyx-status this))
+    (if (or force? (healthy-onyx-status? (onyx-status this)))
       (let [onyx-client (client onyx)
             tenancy-id (onyx-engine/tenancy-id onyx)]
         (log/info {:message "Performing checkpoint garbage collection"})
@@ -292,7 +292,7 @@
       (log/info {:message "Starting Steelyx service"
                  :job-defs (keys job-defs)})
       (reset! state (initial-state))
-      (janitor/set-cleaner! janitor #(deep-gc! this))
+      (janitor/set-cleaner! janitor #(deep-gc! this %))
       (as-> this this
         (assoc this :events-chan (async/chan))
         (assoc this :sub (onyx-api/subscribe-to-log (client onyx) (:events-chan this)))
@@ -361,8 +361,9 @@
                                             :body (kill-job! this (:params req))})))
                    (POST "/gc" req
                          :summary "Garbage collect"
+                         :body [params (S/maybe GcOptions)]
                          (with-resources this [:janitor]
-                           (janitor/request-gc! janitor)
+                           (janitor/request-gc! janitor params)
                            {:status 201
                             :body nil}))))
         wrap-tracing))

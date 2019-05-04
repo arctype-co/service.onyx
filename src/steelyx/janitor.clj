@@ -27,9 +27,9 @@
 (def ^:private global-instance (atom nil))
 
 (defn request-gc!
-  [{:keys [fsm]}]
+  [{:keys [fsm]} options]
   (log/debug {:message "Requesting garbage collection"})
-  (fsm/transition! fsm :request-gc)
+  (fsm/transition! fsm :request-gc options)
   nil)
 
 (defn set-cleaner!
@@ -91,22 +91,25 @@
     (fsm/transition! fsm :shutdown)))
 
 (defn- fsm-locking-gc
-  [fsm {:keys [config mutex]}]
-  (try
-    (log/debug {:message "Acquiring GC mutex"})
-    (if (curator-mutex/acquire mutex (:mutex-timeout-ms config))
-      (fsm/transition! fsm :acquired)
-      (fsm/transition! fsm :timeout))
-    (catch Exception e
-      (log/error e {:message "Failure in mutex acquisition"})
-      (fsm/transition! fsm :timeout))))
+  ([fsm this]
+   (fsm-locking-gc fsm this nil))
+  ([fsm {:keys [config mutex]} {:keys [force?] :as options}]
+   (try
+     (log/debug {:message "Acquiring GC mutex"
+                 :force? force?})
+     (if (or force? (curator-mutex/acquire mutex (:mutex-timeout-ms config)))
+       (fsm/transition! fsm :acquired options)
+       (fsm/transition! fsm :timeout))
+     (catch Exception e
+       (log/error e {:message "Failure in mutex acquisition"})
+       (fsm/transition! fsm :timeout)))))
 
 (defn- fsm-performing-gc
-  [fsm {:keys [state] :as this}]
+  [fsm {:keys [state] :as this} options]
   (try 
     (log/info {:message "Checking status for garbage collection"})
     (let [{:keys [cleaner]} @state]
-      (cleaner))
+      (cleaner options))
     (catch Exception e
       (log/error e {:message "Failed garbage collection"}))
     (finally

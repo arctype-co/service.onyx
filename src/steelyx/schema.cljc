@@ -23,3 +23,6 @@
 
 (def ResumeJobParams
   JobSelect)
+
+(def GcOptions
+  {(S/optional-key :force?) S/Bool})
