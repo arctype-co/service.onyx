@@ -121,8 +121,12 @@
     (log/debug {:message "Releasing GC mutex"})
     (curator-mutex/release mutex)
     (fsm/transition! fsm :released)
+    (catch java.lang.IllegalStateException e
+      (log/error e {:message "Failure in mutex release, not acquired."})
+      (fsm/transition! fsm :released))
     (catch Exception e
       (log/error e {:message "Failure in mutex release, retrying."})
+      (Thread/sleep 1000)
       (fsm/transition! fsm :retry))))
 
 (def ^:private fsm-spec

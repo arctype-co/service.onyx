@@ -247,7 +247,7 @@
                        :tenancy-id tenancy-id
                        :job-id job-id}
                       (onyx-api/gc-checkpoints onyx-client tenancy-id job-id))))
-        (if (healthy-onyx-status? (onyx-status this))
+        (if (or force? (healthy-onyx-status? (onyx-status this)))
           (do
             (log/info {:message "Performing log garbage collection"})
             (onyx-api/gc onyx-client)
