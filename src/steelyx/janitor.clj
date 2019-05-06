@@ -27,10 +27,11 @@
 (def ^:private global-instance (atom nil))
 
 (defn request-gc!
-  [{:keys [fsm]} options]
+  ([this] (request-gc! this nil))
+  ([{:keys [fsm]} options]
   (log/debug {:message "Requesting garbage collection"})
   (fsm/transition! fsm :request-gc options)
-  nil)
+  nil))
 
 (defn set-cleaner!
   "Provide a function to perform the garbage collection."
