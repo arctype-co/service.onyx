@@ -86,7 +86,7 @@
    :output-fn :inherit
    :fmt-output-opts {:nofonts? true}
    :fn (fn [data]
-         (log/log (:?ns-str data) (:level data) (:?err data) (apply print-str (:vargs data))))})
+         (log/log (:?ns-str data) (:level data) (:?err data) @(:msg_ data)))})
 
 (defrecord OnyxService [config]
   PLifecycle
