@@ -10,6 +10,9 @@
 (def JobKillRequest
   JobSelect)
 
+(def JobKillAllRequest
+  S/Any)
+
 (def JobState
   S/Any)
 

@@ -53,7 +53,8 @@
 (defn handle-validation-exception
   [^Exception ex data request]
   (log/error {:message "Request schema error"
-              :data (select-keys data [:schema :value :errors])})
+              ;:data (select-keys data [:schema :value :errors])
+              })
   (let [error-type  (case (:type data)
                       :compojure.api.exception/request-validation "request "
                       :compojure.api.exception/response-validation "response "
@@ -141,11 +142,13 @@
 
 (S/defn ^:private kill-job!
   [this
-   {:keys [job-id job-name]} :- JobKillRequest]
+   {:keys [job-id job-name] :as params} :- JobKillRequest]
   (with-resources this [:onyx]
-    (let [job-id (or job-id (:job-id (last (onyx-api/job-ids-history (client onyx) (onyx-engine/tenancy-id onyx) job-name))))
+    (let [job-id (or job-id 
+                     (when (some? job-name)
+                       (:job-id (last (onyx-api/job-ids-history (client onyx) (onyx-engine/tenancy-id onyx) job-name))))
+                     (throw (ex-info "No such job id" params)))
           result (onyx-engine/kill-job onyx job-id)]
-      
       (if result
         (do 
           (log/info {:message "Job killed"
@@ -255,6 +258,12 @@
           (log/warn {:message "Log garbage collection blocked"})))
       (log/warn {:message "Garbage collection blocked"}))))
 
+(S/defn ^:private kill-all-jobs!
+  [{:keys [state] :as this} 
+   params :- JobKillAllRequest]
+  {:killed (doall (for [job-id (:jobs (:replica @state))]
+                    (kill-job! this {:job-id (str job-id)})))})
+
 (defn- handle-log-entry
   [{:keys [state]} entry]
   (swap! state update :replica
@@ -337,6 +346,12 @@
                                   :summary "Kill a job"
                                   {:status 200
                                    :body (kill-job! this params)})
+                            (POST "/kill-all" req
+                                  :body [params JobKillAllRequest]
+                                  :return S/Any
+                                  :summary "Kill all jobs"
+                                  {:status 200
+                                   :body (kill-all-jobs! this params)})
                             (GET "/id/:job-id" req
                                  :return JobState
                                  :summary "Get job state"
