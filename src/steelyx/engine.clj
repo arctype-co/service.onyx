@@ -88,13 +88,14 @@
    :fn (fn [data]
          (log/log (:?ns-str data) (:level data) (:?err data) @(:msg_ data)))})
 
-(defrecord OnyxService [config]
+(defrecord OnyxService [config context-state]
   PLifecycle
 
   (start [this]
     (log/info {:message "Starting Onyx service"
                :tenancy-id (:onyx/tenancy-id (:peer-config config))})
     (let [peer-config (assoc (:peer-config config)
+                             :steelyx/context context-state
                              :onyx.log/config 
                              {:appenders
                               {:println nil
@@ -130,9 +131,11 @@
 
 (S/defn create
   [resource-name
-   config :- Config]
+   config :- Config
+   context-state]
   (let [config (rmerge (rmerge default-config (env-config)) config)]
     (resource/make-resource
       (map->OnyxService
-        {:config config})
+        {:config config
+         :context-state context-state})
       resource-name)))

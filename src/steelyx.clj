@@ -102,10 +102,10 @@
   result)
 
 (S/defn ^:private submit-job! :- OnyxJob
-  [{:keys [state] :as this} job-builder job-config]
+  [{:keys [context state] :as this} job-builder job-config]
   (with-resources this [:onyx]
     (let [onyx-client (client onyx)
-          job-spec (job-builder (:job-context @state) job-config)
+          job-spec (job-builder @context job-config)
           result (onyx-api/submit-job onyx-client job-spec)]
       (check-error result)
       (log/info {:message "Onyx job submitted"
@@ -115,14 +115,14 @@
        :job-name (:job-name job-spec)})))
 
 (S/defn ^:private resume-job! :- OnyxResumedJob
-  [{:keys [state] :as this}
+  [{:keys [context state] :as this}
    {:keys [job-id job-name] :as params} :- ResumeJobParams
    job-builder
    job-config]
   (with-resources this [:onyx]
     (let [onyx-client (client onyx)
           tenancy-id (onyx-engine/tenancy-id onyx)
-          new-job (job-builder (:job-context @state) job-config)
+          new-job (job-builder @context job-config)
           snapshot (if (some? job-id)
                      (onyx-api/job-snapshot-coordinates onyx-client tenancy-id job-id)
                      (onyx-api/named-job-snapshot-coordinates onyx-client tenancy-id job-name))
@@ -285,13 +285,12 @@
 
 (defn- initial-state
   []
-  {:job-context nil
-   :replica nil})
+  {:replica nil})
 
 (defn set-job-context!
   "Set the context for job construction"
-  [{:keys [state]} context]
-  (swap! state assoc :job-context context))
+  [{:keys [context]} context-obj]
+  (deliver context context-obj))
 
 (defrecord DataService [config state job-defs]
 
@@ -399,15 +398,17 @@
   [resource-name
    config :- Config
    job-def-set]
-  (let [config (merge default-config config)]
+  (let [config (merge default-config config)
+        context-state (promise)]
     (resource/make-resource
       (map->DataService
         {:config config
          :state (atom {})
+         :context context-state
          :job-defs (index-job-defs job-def-set)})
       resource-name
       #{}
       [(curator/create :curator (:curator config))
-       (onyx-engine/create :onyx (:onyx config))
+       (onyx-engine/create :onyx (:onyx config) context-state)
        (janitor/create :janitor (:janitor config))
        (quartzite/create :quartzite {})])))
